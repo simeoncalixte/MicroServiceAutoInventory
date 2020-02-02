@@ -1,0 +1,28 @@
+{
+  "name": "inventory",
+  "version": "1.0.0",
+  "description": "Coparts Inventory ",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "tsc": "tsc -w",
+    "start": "nodemon index.js"
+  },
+  "keywords": [
+    "inventory"
+  ],
+  "author": "Calixte Simeon",
+  "license": "ISC",
+  "dependencies": {
+    "@types/app-root-path": "^1.2.4",
+    "@types/mongodb": "^3.3.14",
+    "app-root-path": "^3.0.0",
+    "dotenv": "^8.2.0",
+    "mongodb": "^3.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^13.5.0",
+    "nodemon": "^2.0.2",
+    "typescript": "^3.7.5"
+  }
+}
