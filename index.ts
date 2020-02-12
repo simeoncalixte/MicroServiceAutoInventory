@@ -1,24 +1,25 @@
 import http, { IncomingMessage, ServerResponse } from "http";
-import RequestHandler from "./src/classes/RequestHandler"
+import router from "./src/classes/Router"
 import dotenv from "dotenv";
-import Inventory from "./src/classes/getInventory";
+import Inventory from "./src/classes/Inventory/Inventory";
 //load environment variables 
 dotenv.config()
 
- 
 
-const ReqHandler = new RequestHandler();
-ReqHandler.router.createRoute("GET", "/",(req: IncomingMessage, res: ServerResponse)=>{
-    console.log("Hello /")
+router.createRoute("GET", "/",(req: IncomingMessage, res: ServerResponse)=>{
 });
-
 
 /**
  * @todo : make routes accept method calls and index route accept args  
  */
-ReqHandler.router.createRoute(
+let url = `/Inventory/?Year:/?make:/?model:/?modelDetail:/?bodyStyle:`
+url += `/?color:/?odometer:/?hasKeys:/?retailValue:/?repairCost:/?buyItNowPrice:`;
+url += `/?engine:/?drive:/?transmission:/?fuelType:/?cylinder:/?runAndDrive:`;
+url += `/?makeAnOffer:/?damages:/?locationProximity:`;
+
+router.createRoute(
     "GET", 
-    `/Inventory/?Year:/?make:/?model:/?modelGroup:/?bodyStyle:/?color:/?odometer:/?hasKeys:`,
+    url,
     (req,res,data) => {
         Inventory.getInventory(data).then((array)=>{
             res.writeHead(200,"Success",{"Content-type": "application/json"})
@@ -28,7 +29,7 @@ ReqHandler.router.createRoute(
     }
 );
 
-ReqHandler.router.createRoute(
+router.createRoute(
     "GET", `/favicon.ico`,
     (req,res,data) => {
         res.statusCode = 204
@@ -36,10 +37,9 @@ ReqHandler.router.createRoute(
     }
 );
 
-
 const server = http.createServer(
     (req: IncomingMessage,res: ServerResponse) => {
-        ReqHandler.handleRequest(req,res);
+        router.handleRequest(req,res);
     });
 
 server.listen(8000,"localhost",()=>{
