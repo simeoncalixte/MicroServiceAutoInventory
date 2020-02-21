@@ -15,7 +15,7 @@ const parseCSVValues = (str) => {
     var _a;
     return (_a = str) === null || _a === void 0 ? void 0 : _a.split(",").map(str => str.toUpperCase());
 };
-const parseRange = (str) => {
+const parseNumberQueries = (str) => {
     var _a;
     const indiArgs = (_a = str) === null || _a === void 0 ? void 0 : _a.match(/\d+(-\d+)/gi);
     let rangeQuery;
@@ -78,17 +78,28 @@ const routeQueryCreator = {
         return colors ? { "Color": { $in: colors } } : null;
     },
     "odometer": (odometer) => {
-        console.log("ODOMETER", parseRange(odometer));
-        return !!odometer ? { "Odometer": parseRange(odometer) } : null;
+        console.log("ODOMETER", parseNumberQueries(odometer));
+        return !!odometer ? { "Odometer": parseNumberQueries(odometer) } : null;
     },
     "hasKeys": (hasKeys) => {
         if (!!hasKeys) {
             return { "Has Keys-Yes or No": hasKeys.toUpperCase() };
         }
     },
-    "damage": () => { },
-    "bodyType": () => { },
-    "subModel": () => { },
+    "retailValue": () => {
+        const est = {};
+        est["Est.Retail Value"] = { $gt: 0, $lt: 100000 };
+        return est;
+    },
+    "repairCost": () => { },
+    "buyItNowPrice": () => { },
+    "engine": () => { },
+    "drive": () => { },
+    "transmission": () => { },
+    "fuelType": () => { },
+    "cylinder": () => { },
+    "runAndDrive": () => { },
+    "makeAnOffer": () => { },
 };
 class Inventory {
     constructor(url) {
