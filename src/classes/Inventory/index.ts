@@ -16,8 +16,8 @@ const mkdir = utils.promisify(fs.mkdir);
 
 export default class Inventory {
     private url?: string = "";
-    private mainInventoryCSVDir = `${sep}src${sep}data${sep}inventory${sep}`;
-    private archiveInventoryCSVDir = `${sep}src${sep}data${sep}inventory${sep}archive${sep}`;
+    private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
+    private archiveInventoryCSVDir = `${sep}data${sep}inventory${sep}archive${sep}`;
     private fileName = `inv.csv`;
     static responseLimit = 1000;
     

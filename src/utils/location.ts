@@ -1,4 +1,4 @@
-import {zipCodes} from "../data/location/zipInfo"
+import {zipCodes} from "../../data/location/zipInfo"
 import { Point } from "geojson";
 
 export default (zip: string )=>{
