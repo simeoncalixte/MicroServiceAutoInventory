@@ -1,7 +1,7 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import router from "./src/classes/Router"
 import dotenv from "dotenv";
-import Inventory from "./src/classes/Inventory/Inventory";
+import Inventory from "./src/classes/Inventory";
 //load environment variables 
 dotenv.config()
 
@@ -16,7 +16,6 @@ let url = `/Inventory/?Year:/?make:/?model:/?modelDetail:/?bodyStyle:`
 url += `/?color:/?odometer:/?hasKeys:/?retailValue:/?repairCost:/?buyItNowPrice:`;
 url += `/?engine:/?drive:/?transmission:/?fuelType:/?cylinder:/?runAndDrive:`;
 url += `/?makeAnOffer:/?damages:/?locationProximity:`;
-
 router.createRoute(
     "GET", 
     url,

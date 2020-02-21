@@ -1,4 +1,5 @@
-import distanceMatrix from "../DistanceMatrix";
+import findZipInfo from "../../utils/location"
+import convertDistance, {unit} from "convert-units"
 
 enum IDistanceUnits {
     miles, kilometers
@@ -64,12 +65,13 @@ export const routeQueryCreator : {[key:string]: Function} =  {
         }
     },
     "make" : (make: string ) => {
+            
             let makes = parseCSVValues(make);
             return makes ? {"Make": {$in: makes}} : null;
     },
     "model" : (model: string) => {
         let models = parseCSVValues(model);
-        console.log(!!models);
+        
         return models && models.length ? {"Model Group": {$in: models}} : null;
     },
     "modelDetail" : (modelGroup : string ) => {
@@ -88,12 +90,6 @@ export const routeQueryCreator : {[key:string]: Function} =  {
      * @todo: correct odometer selection zero;
      */
     "odometer" : (odometer : string ) => {
-        console.log({
-            typeof: typeof odometer,
-            parseInt: parseInt(odometer),
-            boolean: odometer != ''
-
-        })
         const query = parseNumberQueries(odometer).rangeQuery[0];
         if (query){
             return  {"Odometer": query };
@@ -120,20 +116,19 @@ export const routeQueryCreator : {[key:string]: Function} =  {
        };
     },
     "engine" : (engine: string ) => {
-        console.log({engine});
+        
         if (engine){
            return  {"Engine":{$in: parseCSVValues(engine)}}
        };
     },
     "drive" : (drive: string ) => {   
-        console.log({drive});
+        
 
        if (drive){
            return  {Drive: {$in: parseCSV(drive)}}
        };
     },
     "transmission" : (transmission: string ) => {   
-        console.log({transmission});
        if (transmission){
            return  {Transmission: {$in: parseCSVValues(transmission)}}
        };
@@ -171,11 +166,21 @@ export const routeQueryCreator : {[key:string]: Function} =  {
 
      "locationProximity": (location: string ) => {
          if(location){
+             // @todo: correct unit types
              const match = location.match(/\d+(?=\s+(mi|miles|km|kilometers))|(mi|miles|km|kilometers)|(\d+){5}((-)(\d{4}))?(\s)?$/gi);
              if(match && match.length === 3){
-                const [distance,unit, startingPoint] = match
-                distanceMatrix.getZipCoordinates(startingPoint);
-                
+                let [maxDistance,, startingPoint] = match;
+                const distanceUnit = match[1] as  unit;
+                const locationInfo = findZipInfo(startingPoint);
+                const dist = convertDistance(parseInt(maxDistance)).from(distanceUnit).to("m")
+                return locationInfo && {
+                    geoLocation: {
+                       $nearSphere: {
+                          $geometry: locationInfo,
+                          $maxDistance: dist
+                       }
+                    }
+                }    
             }
         }
      }

@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const DistanceMatrix_1 = __importDefault(require("../DistanceMatrix"));
+const location_1 = __importDefault(require("../../utils/location"));
+const convert_units_1 = __importDefault(require("convert-units"));
 var IDistanceUnits;
 (function (IDistanceUnits) {
     IDistanceUnits[IDistanceUnits["miles"] = 0] = "miles";
@@ -58,7 +59,6 @@ exports.routeQueryCreator = {
     },
     "model": (model) => {
         let models = parseCSVValues(model);
-        console.log(!!models);
         return models && models.length ? { "Model Group": { $in: models } } : null;
     },
     "modelDetail": (modelGroup) => {
@@ -77,11 +77,6 @@ exports.routeQueryCreator = {
      * @todo: correct odometer selection zero;
      */
     "odometer": (odometer) => {
-        console.log({
-            typeof: typeof odometer,
-            parseInt: parseInt(odometer),
-            boolean: odometer != ''
-        });
         const query = parseNumberQueries(odometer).rangeQuery[0];
         if (query) {
             return { "Odometer": query };
@@ -111,21 +106,18 @@ exports.routeQueryCreator = {
         ;
     },
     "engine": (engine) => {
-        console.log({ engine });
         if (engine) {
             return { "Engine": { $in: parseCSVValues(engine) } };
         }
         ;
     },
     "drive": (drive) => {
-        console.log({ drive });
         if (drive) {
             return { Drive: { $in: parseCSV(drive) } };
         }
         ;
     },
     "transmission": (transmission) => {
-        console.log({ transmission });
         if (transmission) {
             return { Transmission: { $in: parseCSVValues(transmission) } };
         }
@@ -166,10 +158,21 @@ exports.routeQueryCreator = {
     },
     "locationProximity": (location) => {
         if (location) {
+            // @todo: correct unit types
             const match = location.match(/\d+(?=\s+(mi|miles|km|kilometers))|(mi|miles|km|kilometers)|(\d+){5}((-)(\d{4}))?(\s)?$/gi);
             if (match && match.length === 3) {
-                const [distance, unit, startingPoint] = match;
-                DistanceMatrix_1.default.getZipCoordinates(startingPoint);
+                let [maxDistance, , startingPoint] = match;
+                const distanceUnit = match[1];
+                const locationInfo = location_1.default(startingPoint);
+                const dist = convert_units_1.default(parseInt(maxDistance)).from(distanceUnit).to("m");
+                return locationInfo && {
+                    geoLocation: {
+                        $nearSphere: {
+                            $geometry: locationInfo,
+                            $maxDistance: dist
+                        }
+                    }
+                };
             }
         }
     }
