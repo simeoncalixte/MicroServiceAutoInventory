@@ -29,6 +29,7 @@ Router.handleRequest = (req, res) => {
     var _a;
     if (req.method) {
         const reqInfo = Router.parseUrl(req.method, req.url);
+        console.log(req.method, req.url, reqInfo);
         try {
             if ((_a = reqInfo) === null || _a === void 0 ? void 0 : _a.pathname) {
                 const route = Router.routes[req.method][reqInfo.pathname];

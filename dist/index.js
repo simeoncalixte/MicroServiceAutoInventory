@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = __importDefault(require("http"));
 const Router_1 = __importDefault(require("./src/classes/Router"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const Inventory_1 = __importDefault(require("./src/classes/Inventory/Inventory"));
+const Inventory_1 = __importDefault(require("./src/classes/Inventory"));
 //load environment variables 
 dotenv_1.default.config();
 Router_1.default.createRoute("GET", "/", (req, res) => {

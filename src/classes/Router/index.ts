@@ -44,6 +44,7 @@ class Router {
     public static handleRequest = (req : IncomingMessage, res: ServerResponse ) => {
         if (req.method){
             const reqInfo =  Router.parseUrl(req.method,req.url);
+            console.log(req.method,req.url, reqInfo)
             try{
                 if(reqInfo?.pathname){
                     const route = Router.routes[req.method][reqInfo.pathname];
