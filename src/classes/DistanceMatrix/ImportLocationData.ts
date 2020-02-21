@@ -11,21 +11,17 @@ const fileLocation = `${sep}data${sep}location${sep}`;
 const fileArciveLocation = `${sep}data${sep}location${sep}archive${sep}`;
 const fileName = `zipInfo.csv`;
 const location = rootPath+fileLocation+fileName;
-
-try{
-    const args = `--uri mongodb://localhost:27017/Inventory -c locationServices --type csv --headerline --file ${location}`
-    const mongoImport = mongoImport2(args)
-    mongoImport.on("message", (message)=> console.log(message))
-    mongoImport.on("error", (error)=> console.log(error))
-    mongoImport.on("exit", (exit)=> console.log(exit))
-    mongoImport.on("close", (close)=> console.log(close))
-}catch(e){
-    console.log(e)
-}
-
 const Import = new Importer(url,fileLocation,fileArciveLocation,fileName);
-Import.download().then((value)=>{
-    console.log(
-    )
+
+export default Import.download().then((value)=>{
+    try{
+        const args = `--uri mongodb://localhost:27017/Inventory -c locationServices --type csv --headerline --file ${location}`
+        const mongoImport = mongoImport2(args)
+        mongoImport.on("message", (message)=> console.log(message))
+        mongoImport.on("error", (error)=> console.log(error))
+        mongoImport.on("exit", (exit)=> console.log(exit))
+        mongoImport.on("close", (close)=> console.log(close))
+    }catch(e){
+        console.log(e)
+    }
 });
-export default Import

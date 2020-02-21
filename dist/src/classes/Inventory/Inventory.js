@@ -34,7 +34,10 @@ class Inventory {
             const parser = csv_parse_1.default({
                 delimiter: ',',
                 skip_lines_with_error: true,
-                columns: true
+                columns: true,
+                quote: '"',
+                cast: true,
+                cast_date: true,
             });
             const src = fs_1.default.createReadStream(app_root_path_1.default + path_1.sep + this.mainInventoryCSVDir +
                 path_1.sep + this.fileName, { encoding: "utf8" });
@@ -42,7 +45,8 @@ class Inventory {
                 this.mainInventoryCSVDir + path_1.sep + "inv.json");
             const transformCSV = stream_transform_1.default((data) => {
                 // find corresponding lon and lat from zip code and assign a
-                // geoJSON object to the data 
+                // geoJSON object to the data
+                console.log(data);
                 if (data["Location ZIP"]) {
                     const zipData = location_1.default(data["Location ZIP"]);
                     zipData ? data.geoLocation = zipData : null;
@@ -85,7 +89,7 @@ Inventory.createQuery = (data) => {
     let query = {};
     for (const key in data) {
         console.log(key);
-        if (queryCreator_1.routeQueryCreator[key]) {
+        if (data[key] && queryCreator_1.routeQueryCreator[key]) {
             query = (Object.assign(query, queryCreator_1.routeQueryCreator[key](data[key])));
         }
         else { }
@@ -96,25 +100,11 @@ Inventory.getInventory = async (data) => {
     var _a;
     return await ((_a = mongoClient_1.default()) === null || _a === void 0 ? void 0 : _a.then((MongoClient) => {
         let query = Inventory.createQuery(data);
-        console.log(query);
         return MongoClient.db("Inventory")
-            .collection("main").aggregate([
-            {
-                $geoNear: {
-                    near: { type: "Point", coordinates: [-73.99279, 40.719296] },
-                    distanceField: "dist.calculated",
-                    maxDistance: 2,
-                    query: { category: "Parks" },
-                    includeLocs: "dist.location",
-                    spherical: true
-                },
-                ...query
-            }
-        ])
+            .collection("main")
+            .find(query)
             .toArray().then((element) => {
             return element;
         });
     }));
 };
-new Inventory('https://inventory.copart.io/FTPLSTDM/salesdata.cgi').download();
-console.log("the power of async");
