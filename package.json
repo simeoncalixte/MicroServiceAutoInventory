@@ -4,11 +4,13 @@
   "description": "Coparts Inventory ",
   "main": "index.js",
   "scripts": {
-    "test": "test",
-    "tsc": "tsc -w",
-    "runApp": "nodemon dist/index.js",
-    "start": "run-p runApp tsc",
-    "dev": "npm-run-all tsc start"
+    "dev": "run-s build:types build:js runApp",
+    "runApp": "nodemon ./dist/index.js",
+    "type-check": "tsc  --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "run-s build:types build:js",
+    "build:types": "tsc --emitDeclarationOnly -d",
+    "build:js": "babel ./ --out-dir dist --extensions \".ts,.tsx\" --source-maps inline"
   },
   "keywords": [
     "inventory"
@@ -16,6 +18,11 @@
   "author": "Calixte Simeon",
   "license": "ISC",
   "dependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.8.4",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/preset-env": "^7.8.4",
+    "@babel/preset-typescript": "^7.8.3",
     "@types/app-root-path": "^1.2.4",
     "@types/mongodb": "^3.3.14",
     "@types/papaparse": "^5.0.3",
