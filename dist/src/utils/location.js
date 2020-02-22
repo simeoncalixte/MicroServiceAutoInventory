@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const zipInfo_1 = require("../data/location/zipInfo");
+const zipInfo_1 = require("../../data/location/zipInfo");
 exports.default = (zip) => {
     let geoJSON;
     if (zipInfo_1.zipCodes[zip]) {
