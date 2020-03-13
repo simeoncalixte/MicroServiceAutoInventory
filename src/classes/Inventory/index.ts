@@ -10,10 +10,14 @@ import csvParser from "csv-parse";
 import transformer from "stream-transform"
 import mongoImporter from "../DataImporters/csvImporter"
 import findZipData from "../../utils/location"
+import { Request, Response, json } from "express";
+import  mongodb, {CollectionMapFunction,Logger} from "mongodb";
 
 const access = utils.promisify(fs.access);
 const mkdir = utils.promisify(fs.mkdir);
 
+declare function emit ( k:any , v?:any) : void;
+declare function print (message: any) : void;
 export default class Inventory {
     private url?: string = "";
     private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
@@ -102,37 +106,83 @@ export default class Inventory {
         mongoImport.on("close", (close)=> console.log({close}))
     }
     
-    static  getInventory =  async( queryObject : {[key : string]: any} ) => {
-       return mongoClient()?.then((MongoClient) =>{
-        let query = Inventory.createQuery(queryObject);
-        const page = queryObject.page? queryObject.page-1 : 0;
-        const limit: number = queryObject.limit && (queryObject.limit  <= Inventory.responseLimit)? 
-                        queryObject.limit 
-                        : Inventory.responseLimit as number
-        let cursor = MongoClient.db("Inventory")
-                .collection("main")
-                .find(query);
+    static  getInventory =  async( req: Request, res: Response ) => {
+        console.log(req.params,req.query);
+        const data = {...req.params,...req.query};
+        
+        return mongoClient()?.then((MongoClient) =>{
+          let query = Inventory.createQuery(data);
+          const page = data.page? data.page-1 : 0;
+          const limit: number = data.limit && (data.limit  <= Inventory.responseLimit)? 
+                          data.limit 
+                          : Inventory.responseLimit as number
+          let cursor = MongoClient.db("Inventory")
+                        .collection("main");
 
-        return cursor.count().then((count)=>{
-            return cursor
-                .skip(page*limit)
-                .limit(limit)
-                .toArray().then((data)=>{
-                    return {
-                        Inventory: {
-                            totalRecords: count,
-                            paginationInfo : {
-                                currentPage: page+1,
-                                limit,
-                                lastPage: Math.ceil(count/Inventory.responseLimit),
-                            },
-                            data,
-                        }
+          const find =  cursor.find(query);   
+          find.count((error,count)=>{
+              find.skip(page*limit)
+              .limit(limit*1)
+              .toArray().then((data)=>{
+                  res.json(
+                    {
+                      Inventory: {
+                          totalRecords: count,
+                          paginationInfo : {
+                              currentPage: page+1,
+                              limit,
+                              lastPage: Math.ceil(count/Inventory.responseLimit),
+                          },
+                          data,
+                      }
                     }
-                })
-            });
+                  )
+              }).finally(()=>[
+                  res.end()
+              ])
+              
+          })
+                  
+
         })
     }
 
-}
+    static attributes = async(req: Request,res: Response) => {
+       return mongoClient()?.
+        then((MongoClient) =>{
+            const collection = MongoClient.db("Inventory")
+                .collection("main");
 
+
+                 return collection.mapReduce(
+                      function ( ) {
+                          const ignore = /_id|ID|Sale Date M\/D\/CY|Sale time \(HHMM\)|geoLocation|Buy-It-Now Price|Create Date\/Time|High Bid =non-vix,Sealed=Vix|Image Thumbnail|Image URL|Item#|Last Updated Time|Lot number|Special Note|Grid\/Row|VIN/gi;
+                          for (let key in this) {
+                             if(!key.match(ignore)){
+                                 emit(key,this[key]);
+                             }
+                          }
+                      },
+                      function(key, values) {
+                         return Array.from(new Set(values)); 
+                      },
+                      {
+
+                        finalize: (key: string, reducedVal: {}[] ) => {
+                        },
+                        out: {
+                            inline: 1,
+                        }
+ 
+                      }
+                 );
+
+        }).then((results)=>{
+            //console.log(results)
+            
+        }).finally(()=>{
+            res.end();
+        }).catch(e => console.log(e))
+
+}
+}

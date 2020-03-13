@@ -19,8 +19,8 @@ const mkdir = util_1.default.promisify(fs_1.default.mkdir);
 class Inventory {
     constructor(url) {
         this.url = "";
-        this.mainInventoryCSVDir = `${path_1.sep}src${path_1.sep}data${path_1.sep}inventory${path_1.sep}`;
-        this.archiveInventoryCSVDir = `${path_1.sep}src${path_1.sep}data${path_1.sep}inventory${path_1.sep}archive${path_1.sep}`;
+        this.mainInventoryCSVDir = `${path_1.sep}data${path_1.sep}inventory${path_1.sep}`;
+        this.archiveInventoryCSVDir = `${path_1.sep}data${path_1.sep}inventory${path_1.sep}archive${path_1.sep}`;
         this.fileName = `inv.csv`;
         this.download = () => {
             if (this.url) {

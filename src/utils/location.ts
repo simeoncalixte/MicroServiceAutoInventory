@@ -1,10 +1,11 @@
-import {zipCodes} from "../../data/location/zipInfo"
+import zipCodes  from "../data/location/zipInfo.json"
 import { Point } from "geojson";
 
+const zipObjects = zipCodes as {[codes:string]: any}
 export default (zip: string )=>{
     let geoJSON: Point | undefined 
-    if (zipCodes[zip]){  
-        const {latitude,longitude} = zipCodes[zip]
+    if (zipObjects && zipObjects[zip]){  
+        const {latitude,longitude} = zipObjects[zip]
         geoJSON = {
             type: "Point",
             coordinates: [0,0]
