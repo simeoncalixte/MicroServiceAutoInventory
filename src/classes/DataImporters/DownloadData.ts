@@ -1,16 +1,15 @@
 import https from "https"
-import { IncomingMessage } from "http";
+import http, { IncomingMessage } from "http";
 import CSVImporter from "./csvImporter";
 import fs from "fs";
 import rootPath from "app-root-path";
-import utils from "util";
 import mongoClient from "../../database/mongoClient";
 import path , {sep} from "path";
+import axios, { AxiosRequestConfig,AxiosResponse } from "axios"
+import { Stream } from "stream";
+import mkdir from "../../utils/createDirectory";
 
-const access = utils.promisify(fs.access);
-const mkdir = utils.promisify(fs.mkdir);
-
-export default class Inventory {
+export default class DataDownloadingManager {
     private url: string = ""
     private mainDir = `${rootPath+sep}`
     private archiveDir = `${rootPath+sep}archive${sep}`
@@ -23,42 +22,43 @@ export default class Inventory {
         this.fileName = fileName;
     }
 
-    public  download = async ( ) => {
-       return await this.checkForAndCreateDir(this.mainDir)
+    public  download = async () => {
+       return mkdir(this.mainDir)
        .then(this.archiveExisting)
        .then(this.beginSavingDataStream)
     }
 
     private beginSavingDataStream = async ( ) => {
-        return https.get(this.url,this.processFile);
+        const url = new URL(this.url);
+        const config: AxiosRequestConfig = {
+            responseType : "stream"
+        }
+
+        return axios.get(this.url,config).then(this.processFile).catch(e => console.log(e));                
     }
 
-    private processFile = (res: IncomingMessage ) => {
-        const { statusCode } = res;
-        res.on("data", (chunk)=>{
-            console.log(chunk)
+    private processFile = (res: AxiosResponse<Stream> ) => {
+        const stream = res.data;
+        stream.on("data", (chunk)=>{
+            console.log("data")
             fs.appendFileSync(
                 this.mainDir + this.fileName,
                 chunk
             );
         })
-        res.on("end", (data: any)=>{
-            //TODO :: CORRECT extraneous " in field 4408 column 300
-           // const db = CSVImporter();
+        return new Promise(
+            (res)=>{
+                stream.on("end", (data: any)=>{
+                    res("done")
+            })
         })
+            
     }
 
-    private checkForAndCreateDir = (dir: string) => {
-        console.log(dir)
-        const check = access(dir).catch((err)=>{
-            console.log("Making Dir", dir)
-           return mkdir(dir,{recursive:true})
-        })
-        return check
-    }
+ 
 
     private archiveExisting = async ( ) => {
-       return await this.checkForAndCreateDir(this.archiveDir).then(async ()=>{
+       return await mkdir(this.archiveDir).then(async ()=>{
             const fileNameInfo = path.parse(this.fileName);
             const mainFile = this.mainDir + this.fileName;
             const archivedFile =  this.archiveDir + `${fileNameInfo.name}_${Date.now()}${fileNameInfo.ext}`

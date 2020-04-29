@@ -1,27 +1,118 @@
 import Importer from "../DataImporters/DownloadData"
-import mongoImport2 from "../DataImporters/csvImporter"
 import {sep} from "path";
+import csvParser from "csv-parse";
+import fs from "fs"
+import transformer from "stream-transform"
 import rootPath from "app-root-path";
-import Mongo from "../../database/mongoClient"
-/**
- * @todo : Have a document for each file 
- */
-const url = "https://raw.githubusercontent.com/davglass/zipcodes/master/lib/codes.js";
-const fileLocation = `${sep}data${sep}location${sep}`;
-const fileArciveLocation = `${sep}data${sep}location${sep}archive${sep}`;
-const fileName = `zipInfo.csv`;
-const location = rootPath+fileLocation+fileName;
-const Import = new Importer(url,fileLocation,fileArciveLocation,fileName);
+import mkdir from "../../utils/createDirectory";
 
-export default Import.download().then((value)=>{
-    try{
-        const args = `--uri mongodb://localhost:27017/Inventory -c locationServices --type csv --headerline --file ${location}`
-        const mongoImport = mongoImport2(args)
-        mongoImport.on("message", (message)=> console.log(message))
-        mongoImport.on("error", (error)=> console.log(error))
-        mongoImport.on("exit", (exit)=> console.log(exit))
-        mongoImport.on("close", (close)=> console.log(close))
+const fileLocation = `${sep}data${sep}location${sep}`;
+const fileArchiveLocation = `${sep}data${sep}location${sep}archive${sep}`;
+const fileName = `zipInfo.csv`;
+const jsonFileName = `zipInfo.json`
+const zipCodeDataLinks =  [
+    "http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv",
+    "https://raw.githubusercontent.com/davglass/zipcodes/master/lib/codes.js"
+]
+
+
+const downloadZipCodeData = (
+    url: string, 
+    storeFileTo:string, 
+    archiveExistingTo: string,
+    definitiveFileName: string 
+) => {
+    const importer = new Importer(
+        url,
+        storeFileTo,
+        archiveExistingTo,
+        definitiveFileName
+    )
+
+    //importer.download().
+    //then(()=> mkdir(rootPath + fileLocation)).
+    //then(() => 
+    parseCSV(`${rootPath + fileLocation}`,fileName,jsonFileName)
+    //);
+
+}
+
+let attemptCount = 0;
+
+const attemptZipCodeImport = ( ) => {
+    try {
+        console.log("Downloading Zip Codes")
+        downloadZipCodeData(
+            zipCodeDataLinks[attemptCount],
+            fileLocation,
+            fileArchiveLocation,
+            fileName
+        )
     }catch(e){
-        console.log(e)
+        console.error(e)
+        attemptCount++
+        if(zipCodeDataLinks[attemptCount]){
+            attemptZipCodeImport()
+        }else{
+            console.error(`Index error zipCodeDataLinks ${attemptCount}, zip codes have not been downloaded`)
+        }
     }
-});
+}
+
+const parseCSV = async (
+    mainDir: string, 
+    srcFileName: string, 
+    destFileName: string 
+) => {
+
+    const parser = csvParser({
+        delimiter: ',',
+        skip_lines_with_error: true,
+        columns: true,
+        quote: '"',
+        cast: true,
+        cast_date: true,
+    });
+    let output = {};
+    let index= 0
+    
+
+    const src =  fs.createReadStream( 
+        mainDir+sep+srcFileName,{encoding: "utf8"}
+    );
+    
+    const dest = fs.createWriteStream(
+        mainDir+sep+destFileName,         
+    );
+
+    /// Transform object structure to use zip as Key
+    const transformCSV = transformer((data: {[key: string]: any})=>{
+       const newObject : {[key: string] : any } = {}
+       newObject[data["Zipcode"]] = { 
+           lat: data.Lat,
+           long: data.Long,
+       }
+       return (newObject);
+    });
+    
+    transformCSV.on("data",(chunk)=>{
+        output = Object.assign({},output,chunk);
+    });
+
+    transformCSV.on("error",(error)=>{
+        // this is invoked on error
+    });
+    
+    parser.on("error",(error)=>{console.log(error)});
+    
+    src.pipe(parser).pipe(transformCSV).on("end",()=>{
+        dest.write(JSON.stringify(output), (error)=>{
+            if (error) {
+                console.error(error);
+            }
+        })
+    });
+}
+
+attemptZipCodeImport();
+

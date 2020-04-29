@@ -11,7 +11,7 @@ import transformer from "stream-transform"
 import mongoImporter from "../DataImporters/csvImporter"
 import findZipData from "../../utils/location"
 import { Request, Response, json } from "express";
-import  mongodb, {CollectionMapFunction,Logger} from "mongodb";
+import aggregateAttributes from "../../processes/updateAttributes";
 
 const access = utils.promisify(fs.access);
 const mkdir = utils.promisify(fs.mkdir);
@@ -29,16 +29,17 @@ export default class Inventory {
         this.url = url;
     }
 
-    public  download = ( ) => {
+    public  download = async ( ) => {
         if(this.url){
             const i = new DataImporter(this.url,this.mainInventoryCSVDir,this.archiveInventoryCSVDir,this.fileName)
-            //i.download().then(
+            i.download().then(()=>{
                 this.parseCSV()
-            //);
+                Inventory.updateAttributes
+            });
         }
     }
     
-    private parseCSV = ( ) => {
+    private parseCSV = async ( ) => {
         const output: {}[] = [];
         const parser = csvParser({
             delimiter: ',',
@@ -48,6 +49,7 @@ export default class Inventory {
             cast: true,
             cast_date: true,
         });
+        
         const src =  fs.createReadStream( 
             rootPath+sep+this.mainInventoryCSVDir+
             sep+this.fileName,{encoding: "utf8"}
@@ -80,12 +82,12 @@ export default class Inventory {
         src.pipe(parser).pipe(transformCSV).on("end",()=>{
             dest.write(JSON.stringify(output), (error)=>{
                 if (error) return
-                else this.importInvenotry()
+                else this.importInventory()
             })
         });
     }
 
-    private static createQuery = ( data: {[key:string]: any} )  => {
+    private static createQuery = async ( data: {[key:string]: any} )  => {
         let query = {}
         for ( const key in  data) {
             if (data[key] && routeQueryCreator[key]) {
@@ -96,7 +98,7 @@ export default class Inventory {
 
     }
 
-    private importInvenotry = ( ) => {
+    private importInventory = async ( ) => {
         const path = rootPath+this.mainInventoryCSVDir+"inv.json"
         const args = `--uri mongodb://localhost:27017/Inventory -c main --drop --type json --jsonArray --file ${path}`
         const mongoImport = mongoImporter(args)
@@ -147,42 +149,27 @@ export default class Inventory {
         })
     }
 
-    static attributes = async(req: Request,res: Response) => {
-       return mongoClient()?.
+    static updateAttributes = async () => {
+        return mongoClient()?.
         then((MongoClient) =>{
             const collection = MongoClient.db("Inventory")
                 .collection("main");
+            aggregateAttributes(collection);
+        }).catch(error => {
+            console.error(error)
+        })
+    }
 
+    static attributes = async(req: Request,res: Response) => {
+       return mongoClient()?.
+        then((MongoClient) =>{
+            return MongoClient.db("Inventory")
+                .collection("test").find().toArray((error,results)=>{
+                    if (error) console.error(error);
+                    res.json(results[0])
+                    res.end();
+                })
+        })
 
-                 return collection.mapReduce(
-                      function ( ) {
-                          const ignore = /_id|ID|Sale Date M\/D\/CY|Sale time \(HHMM\)|geoLocation|Buy-It-Now Price|Create Date\/Time|High Bid =non-vix,Sealed=Vix|Image Thumbnail|Image URL|Item#|Last Updated Time|Lot number|Special Note|Grid\/Row|VIN/gi;
-                          for (let key in this) {
-                             if(!key.match(ignore)){
-                                 emit(key,this[key]);
-                             }
-                          }
-                      },
-                      function(key, values) {
-                         return Array.from(new Set(values)); 
-                      },
-                      {
-
-                        finalize: (key: string, reducedVal: {}[] ) => {
-                        },
-                        out: {
-                            inline: 1,
-                        }
- 
-                      }
-                 );
-
-        }).then((results)=>{
-            //console.log(results)
-            
-        }).finally(()=>{
-            res.end();
-        }).catch(e => console.log(e))
-
-}
+    }
 }

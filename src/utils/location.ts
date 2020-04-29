@@ -1,4 +1,4 @@
-import zipCodes  from "../data/location/zipInfo.json"
+import zipCodes  from "../../data/location/zipInfo.json"
 import { Point } from "geojson";
 
 const zipObjects = zipCodes as {[codes:string]: any}
