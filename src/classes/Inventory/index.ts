@@ -12,7 +12,7 @@ import mongoImporter from "../DataImporters/csvImporter"
 import findZipData from "../../utils/location"
 import { Request, Response, json } from "express";
 import aggregateAttributes from "../../processes/updateAttributes";
-
+import axios from "axios";
 const access = utils.promisify(fs.access);
 const mkdir = utils.promisify(fs.mkdir);
 
@@ -125,7 +125,8 @@ export default class Inventory {
           find.count((error,count)=>{
               find.skip(page*limit)
               .limit(limit*1)
-              .toArray().then((data)=>{
+              .toArray()
+              .then((data)=>{
                   res.json(
                     {
                       Inventory: {
@@ -143,10 +144,21 @@ export default class Inventory {
                   res.end()
               ])
               
-          })
-                  
-
+          })                  
         })
+    }
+    
+    static getImages = async (req: Request, res: Response ) => {
+        try{
+            const data = {...req.params,...req.query};
+            let images;
+            await axios.get(data.url)
+                    .then( (res) => { images = res.data } ) 
+            res.json(images)
+            res.end();
+        }catch(e){
+            console.log(e)
+        }
     }
 
     static updateAttributes = async () => {
@@ -161,12 +173,14 @@ export default class Inventory {
     }
 
     static attributes = async(req: Request,res: Response) => {
+        console.log("Geting Attributes")
        return mongoClient()?.
         then((MongoClient) =>{
             return MongoClient.db("Inventory")
                 .collection("test").find().toArray((error,results)=>{
                     if (error) console.error(error);
-                    res.json(results[0])
+                    res.json(results[0]);
+                    console.log("sending attributes")
                     res.end();
                 })
         })

@@ -6,6 +6,8 @@ import Inventory from "./";
 
 
 export default (server: Express) =>{
+    ///Route for inventory images//////////////////////////////////////////////////
+    server.get("/Inventory/images", Inventory.getImages);
     /////////////////////////////////////////////////////////////////////////////////
     //Attribute Routes
     let attributesParams = `:attributes?`;
