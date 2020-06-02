@@ -4,13 +4,12 @@
   "description": "Coparts Inventory ",
   "main": "index.js",
   "scripts": {
-    "dev": "run-s build:types build:js runApp",
-    "runApp": "nodemon ./dist/index.js",
-    "type-check": "tsc  --noEmit",
-    "type-check:watch": "npm run type-check -- --watch",
-    "build": "run-s build:types build:js",
-    "build:types": "tsc --emitDeclarationOnly -d",
-    "build:js": "babel ./ --out-dir dist --extensions \".ts,.tsx\" --source-maps inline"
+    "test": "test",
+    "tsc": "tsc -w",
+    "runApp": "nodemon dist/index.js",
+    "start": "run-p runApp tsc",
+    "dev": "ts-node-dev src/index.ts",
+    "loadInventory": "ts-node-dev src/processes/loadInventory.ts"
   },
   "keywords": [
     "inventory"
@@ -18,6 +17,7 @@
   "author": "Calixte Simeon",
   "license": "ISC",
   "dependencies": {
+    "@types/cors": "^2.8.6",
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.4",
     "@babel/plugin-proposal-class-properties": "^7.8.3",
@@ -27,20 +27,29 @@
     "@types/mongodb": "^3.3.14",
     "@types/papaparse": "^5.0.3",
     "app-root-path": "^3.0.0",
+    "axios": "^0.19.2",
     "convert-units": "^2.3.4",
+    "cors": "^2.8.5",
     "csv": "^5.3.1",
     "csv-parse": "^4.8.5",
     "dotenv": "^8.2.0",
+    "express": "^4.17.1",
     "haversine-geolocation": "^1.3.0",
     "mongodb": "^3.5.2",
     "stream-transform": "^2.0.1"
   },
   "devDependencies": {
+    "@types/app-root-path": "^1.2.4",
+    "@types/express": "^4.17.3",
+    "@types/papaparse": "^5.0.3",
     "@types/convert-units": "^2.3.0",
     "@types/geojson": "^7946.0.7",
+    "@types/mongodb": "^3.5.1",
     "@types/node": "^13.5.0",
     "nodemon": "^2.0.2",
     "npm-run-all": "^4.1.5",
+    "ts-node": "^8.6.2",
+    "ts-node-dev": "^1.0.0-pre.44",
     "typescript": "^3.7.5"
   }
 }

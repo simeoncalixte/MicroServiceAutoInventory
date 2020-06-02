@@ -101,6 +101,7 @@ export const routeQueryCreator : {[key:string]: Function} =  {
         }
     },
     "retailValue" : (retailValue: string ) => {   
+    
        if (retailValue){        
            return  {"Est. Retail Value": parseNumberQueries(retailValue).rangeQuery[0]}
        };

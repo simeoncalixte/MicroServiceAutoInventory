@@ -10,10 +10,14 @@ import csvParser from "csv-parse";
 import transformer from "stream-transform"
 import mongoImporter from "../DataImporters/csvImporter"
 import findZipData from "../../utils/location"
-
+import { Request, Response, json } from "express";
+import aggregateAttributes from "../../processes/updateAttributes";
+import axios from "axios";
 const access = utils.promisify(fs.access);
 const mkdir = utils.promisify(fs.mkdir);
 
+declare function emit ( k:any , v?:any) : void;
+declare function print (message: any) : void;
 export default class Inventory {
     private url?: string = "";
     private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
@@ -25,16 +29,17 @@ export default class Inventory {
         this.url = url;
     }
 
-    public  download = ( ) => {
+    public  download = async ( ) => {
         if(this.url){
             const i = new DataImporter(this.url,this.mainInventoryCSVDir,this.archiveInventoryCSVDir,this.fileName)
-            //i.download().then(
+            i.download().then(()=>{
                 this.parseCSV()
-            //);
+                Inventory.updateAttributes
+            });
         }
     }
     
-    private parseCSV = ( ) => {
+    private parseCSV = async ( ) => {
         const output: {}[] = [];
         const parser = csvParser({
             delimiter: ',',
@@ -44,6 +49,7 @@ export default class Inventory {
             cast: true,
             cast_date: true,
         });
+        
         const src =  fs.createReadStream( 
             rootPath+sep+this.mainInventoryCSVDir+
             sep+this.fileName,{encoding: "utf8"}
@@ -76,12 +82,12 @@ export default class Inventory {
         src.pipe(parser).pipe(transformCSV).on("end",()=>{
             dest.write(JSON.stringify(output), (error)=>{
                 if (error) return
-                else this.importInvenotry()
+                else this.importInventory()
             })
         });
     }
 
-    private static createQuery = ( data: {[key:string]: any} )  => {
+    private static createQuery = async ( data: {[key:string]: any} )  => {
         let query = {}
         for ( const key in  data) {
             if (data[key] && routeQueryCreator[key]) {
@@ -92,7 +98,7 @@ export default class Inventory {
 
     }
 
-    private importInvenotry = ( ) => {
+    private importInventory = async ( ) => {
         const path = rootPath+this.mainInventoryCSVDir+"inv.json"
         const args = `--uri mongodb://localhost:27017/Inventory -c main --drop --type json --jsonArray --file ${path}`
         const mongoImport = mongoImporter(args)
@@ -102,37 +108,82 @@ export default class Inventory {
         mongoImport.on("close", (close)=> console.log({close}))
     }
     
-    static  getInventory =  async( queryObject : {[key : string]: any} ) => {
-       return mongoClient()?.then((MongoClient) =>{
-        let query = Inventory.createQuery(queryObject);
-        const page = queryObject.page? queryObject.page-1 : 0;
-        const limit: number = queryObject.limit && (queryObject.limit  <= Inventory.responseLimit)? 
-                        queryObject.limit 
-                        : Inventory.responseLimit as number
-        let cursor = MongoClient.db("Inventory")
-                .collection("main")
-                .find(query);
+    static  getInventory =  async( req: Request, res: Response ) => {
+        console.log(req.params,req.query);
+        const data = {...req.params,...req.query};
+        
+        return mongoClient()?.then((MongoClient) =>{
+          let query = Inventory.createQuery(data);
+          const page = data.page? data.page-1 : 0;
+          const limit: number = data.limit && (data.limit  <= Inventory.responseLimit)? 
+                          data.limit 
+                          : Inventory.responseLimit as number
+          let cursor = MongoClient.db("Inventory")
+                        .collection("main");
 
-        return cursor.count().then((count)=>{
-            return cursor
-                .skip(page*limit)
-                .limit(limit)
-                .toArray().then((data)=>{
-                    return {
-                        Inventory: {
-                            totalRecords: count,
-                            paginationInfo : {
-                                currentPage: page+1,
-                                limit,
-                                lastPage: Math.ceil(count/Inventory.responseLimit),
-                            },
-                            data,
-                        }
+          const find =  cursor.find(query);   
+          find.count((error,count)=>{
+              find.skip(page*limit)
+              .limit(limit*1)
+              .toArray()
+              .then((data)=>{
+                  res.json(
+                    {
+                      Inventory: {
+                          totalRecords: count,
+                          paginationInfo : {
+                              currentPage: page+1,
+                              limit,
+                              lastPage: Math.ceil(count/Inventory.responseLimit),
+                          },
+                          data,
+                      }
                     }
-                })
-            });
+                  )
+              }).finally(()=>[
+                  res.end()
+              ])
+              
+          })                  
+        })
+    }
+    
+    static getImages = async (req: Request, res: Response ) => {
+        try{
+            const data = {...req.params,...req.query};
+            let images;
+            await axios.get(data.url)
+                    .then( (res) => { images = res.data } ) 
+            res.json(images)
+            res.end();
+        }catch(e){
+            console.log(e)
+        }
+    }
+
+    static updateAttributes = async () => {
+        return mongoClient()?.
+        then((MongoClient) =>{
+            const collection = MongoClient.db("Inventory")
+                .collection("main");
+            aggregateAttributes(collection);
+        }).catch(error => {
+            console.error(error)
         })
     }
 
-}
+    static attributes = async(req: Request,res: Response) => {
+        console.log("Geting Attributes")
+       return mongoClient()?.
+        then((MongoClient) =>{
+            return MongoClient.db("Inventory")
+                .collection("test").find().toArray((error,results)=>{
+                    if (error) console.error(error);
+                    res.json(results[0]);
+                    console.log("sending attributes")
+                    res.end();
+                })
+        })
 
+    }
+}
