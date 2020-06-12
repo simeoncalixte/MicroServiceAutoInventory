@@ -32,9 +32,10 @@ export default class Inventory {
     public  download = async ( ) => {
         if(this.url){
             const i = new DataImporter(this.url,this.mainInventoryCSVDir,this.archiveInventoryCSVDir,this.fileName)
-            i.download().then(()=>{
-                this.parseCSV()
-                Inventory.updateAttributes
+            //i.download()
+            Promise.resolve(1).then(()=>{
+                //this.parseCSV()
+                Inventory.updateAttributes()
             });
         }
     }
@@ -162,7 +163,8 @@ export default class Inventory {
     }
 
     static updateAttributes = async () => {
-        return mongoClient()?.
+        console.log("updating attributes");
+        return await mongoClient()?.
         then((MongoClient) =>{
             const collection = MongoClient.db("Inventory")
                 .collection("main");
