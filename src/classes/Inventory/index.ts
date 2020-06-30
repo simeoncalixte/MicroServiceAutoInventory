@@ -18,6 +18,7 @@ const mkdir = utils.promisify(fs.mkdir);
 
 declare function emit ( k:any , v?:any) : void;
 declare function print (message: any) : void;
+
 export default class Inventory {
     private url?: string = "";
     private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
@@ -114,13 +115,14 @@ export default class Inventory {
         
         return mongoClient()?.then((MongoClient) =>{
           let query = Inventory.createQuery(data);
-          const page = data.page? data.page-1 : 0;
-          const limit: number = data.limit && (data.limit  <= Inventory.responseLimit)? 
-                          data.limit 
-                          : Inventory.responseLimit as number
+          // convert page string to number
+          const page = data && data.page && !Number.isNaN(data.page) ? Number(data.page) - 1 : 0;
+          const limit = data.limit && !Number.isNaN(data.limit) && Number(data.limit) <= Inventory.responseLimit
+                        ? Number(data.limit) : Inventory.responseLimit as number;
+        
           let cursor = MongoClient.db("Inventory")
                         .collection("main");
-
+          console.log({cursor})
           const find =  cursor.find(query);   
           find.count((error,count)=>{
               find.skip(page*limit)
@@ -149,10 +151,12 @@ export default class Inventory {
     }
     
     static getImages = async (req: Request, res: Response ) => {
+        const data = {...req.params, ...req.query};
+        const url = data && data.url ? String(data.url): "";
+
         try{
-            const data = {...req.params,...req.query};
             let images;
-            await axios.get(data.url)
+            await axios.get(url)
                     .then( (res) => { images = res.data } ) 
             res.json(images)
             res.end();

@@ -29,11 +29,11 @@ const downloadZipCodeData = (
         definitiveFileName
     )
 
-    //importer.download().
-    //then(()=> mkdir(rootPath + fileLocation)).
-    //then(() => 
+    importer.download().
+    then(()=> mkdir(rootPath + fileLocation)).
+    then(() => 
     parseCSV(`${rootPath + fileLocation}`,fileName,jsonFileName)
-    //);
+    );
 
 }
 
@@ -114,5 +114,5 @@ const parseCSV = async (
     });
 }
 
-attemptZipCodeImport();
+export default attemptZipCodeImport;
 
