@@ -1,4 +1,3 @@
-
 {
   "header": {
     "reportVersion": 1,
@@ -9,10 +8,7 @@
     "dumpEventTimeStamp": "1581635733959",
     "processId": 7260,
     "cwd": "C:\\Users\\Simeon\\Desktop\\Inventory\\dist\\src\\classes\\Inventory",
-    "commandLine": [
-      "C:\\Program Files\\nodejs\\node.exe",
-      "Inventory.js"
-    ],
+    "commandLine": ["C:\\Program Files\\nodejs\\node.exe", "Inventory.js"],
     "nodejsVersion": "v12.14.1",
     "wordSize": 64,
     "arch": "x64",
@@ -151,9 +147,7 @@
   },
   "javascriptStack": {
     "message": "No stack.",
-    "stack": [
-      "Unavailable."
-    ]
+    "stack": ["Unavailable."]
   },
   "nativeStack": [
     {
@@ -292,8 +286,7 @@
       "writes": 5
     }
   },
-  "libuv": [
-  ],
+  "libuv": [],
   "environmentVariables": {
     "ALLUSERSPROFILE": "C:\\ProgramData",
     "APPDATA": "C:\\Users\\Simeon\\AppData\\Roaming",

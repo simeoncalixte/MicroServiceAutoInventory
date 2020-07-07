@@ -1,0 +1,24 @@
+{
+  "env": {
+    "browser": false,
+    "es2020": true
+  },
+  "extends": [
+    "google",
+    "plugin:prettier/recommended",
+    "prettier",
+    "eslint-config-prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 11,
+    "sourceType": "module"
+  },
+  "plugins": ["@typescript-eslint",  "prettier"],
+  "rules": {
+    "prettier/prettier": "error",
+    "no-invalid-this": "off",
+    "require-jsdoc": "off",
+    "no-unused-vars":"off"
+  }
+}
