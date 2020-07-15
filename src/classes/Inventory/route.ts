@@ -8,6 +8,7 @@ export default (server: Express) => {
   // ///////////////////////////////////////////////////////////////////////////////
   // Attribute Routes
   const attributesParams = `:attributes?`;
+  server.get("/Inventory/attributes/update", Inventory.updateAttributes);
   server.get("/Inventory/attributes" + attributesParams, Inventory.attributes);
   // ///////////////////////////////////////////////////////////////////////////////
   // List Inventory Route

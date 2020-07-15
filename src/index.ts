@@ -1,6 +1,5 @@
 import http, { IncomingMessage, ServerResponse } from "http";
 import express, { Express, NextFunction, Request, Response } from "express";
-import router from "./classes/Router";
 import dotenv from "dotenv";
 import createInventoryRoutes from "./classes/Inventory/route";
 import cors from "cors";

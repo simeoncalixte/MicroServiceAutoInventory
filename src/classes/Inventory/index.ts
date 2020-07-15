@@ -9,14 +9,25 @@ import transformer from "stream-transform";
 import mongoImporter from "../DataImporters/csvImporter";
 import findZipData from "../../utils/location";
 import { Request, Response } from "express";
-import aggregateAttributes from "../../processes/updateAttributes";
+import aggregateAttributes from "../../database/Inventory/aggregations/updateAttritbutes";
 import axios from "axios";
+
+interface IAttribute {
+  [key: string] : string
+}
+
 
 export default class Inventory {
   private url?: string = "";
   private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
   private archiveCSVDir = `${sep}data${sep}inventory${sep}archive${sep}`;
   private fileName = `inv.csv`;
+  private static  attributeTable : IAttribute = {
+    make : 'Makes',
+    model: 'Models',
+    modelDetail: 'ModelDetail',
+    damages: 'Damages'
+  }
   static responseLimit = 1000;
 
   constructor(url?: string) {
@@ -112,32 +123,28 @@ export default class Inventory {
   };
 
   static getInventory = async (req: Request, res: Response) => {
-    console.log(req.params, req.query);
     const data = { ...req.params, ...req.query };
-
+    console.log({data})
     return mongoClient()?.then((MongoClient) => {
+
       const query = Inventory.createQuery(data);
       // convert page string to number
-      const page =
-        data && data.page && !Number.isNaN(data.page)
-          ? Number(data.page) - 1
-          : 0;
-      const limit =
-        data.limit &&
+      const collection = MongoClient.db("Inventory").collection("main");
+      const page = data && data.page && !Number.isNaN(data.page)
+        ? Number(data.page) - 1
+        : 0;
+      const limit = data.limit &&
         !Number.isNaN(data.limit) &&
         Number(data.limit) <= Inventory.responseLimit
-          ? Number(data.limit)
-          : (Inventory.responseLimit as number);
-
-      const cursor = MongoClient.db("Inventory").collection("main");
-      console.log({ cursor });
-      const find = cursor.find(query);
+          ? Number(data.limit): (Inventory.responseLimit as number);
+      const find = collection.find(query);
       find.count((error, count) => {
         find
           .skip(page * limit)
           .limit(limit * 1)
           .toArray()
           .then((data) => {
+            console.log(data)
             res.json({
               Inventory: {
                 totalRecords: count,
@@ -152,7 +159,7 @@ export default class Inventory {
           })
           .finally(() => [res.end()]);
       });
-    });
+    }).catch(e=> console.error(e));
   };
 
   static getImages = async (req: Request, res: Response) => {
@@ -172,10 +179,13 @@ export default class Inventory {
   };
 
   static updateAttributes = async () => {
-    return mongoClient()
-      ?.then((MongoClient) => {
+    console.log("updating attributes");
+    console.log(mongoClient())
+    return mongoClient()?.then( async(MongoClient) => { 
+        console.log("mongoConnected");
         const collection = MongoClient.db("Inventory").collection("main");
-        aggregateAttributes(collection);
+        const aggregatedCollection = await aggregateAttributes(collection);
+        return aggregatedCollection;
       })
       .catch((error) => {
         console.error(error);
@@ -183,17 +193,71 @@ export default class Inventory {
   };
 
   static attributes = async (req: Request, res: Response) => {
-    console.log("Geting Attributes");
-    return mongoClient()?.then((MongoClient) => {
-      return MongoClient.db("Inventory")
-        .collection("test")
-        .find()
-        .toArray((error, results) => {
-          if (error) console.error(error);
-          res.json(results[0]);
-          console.log("sending attributes");
-          res.end();
-        });
-    });
+    let promises = [];
+    
+    if (Object.keys(req.query).length > 0){
+      for (const property in req.query) {
+        console.log({property})
+        const attribute = property.toLowerCase()
+        const properCollectionName = Inventory.attributeTable[attribute];
+        const value = req.query[property];
+        console.log({properCollectionName})
+  
+        if(properCollectionName){
+          promises.push(
+            Inventory.attributeQuery(
+              properCollectionName,
+              value
+            )
+          )
+        }
+      }
+    }else{
+     promises = Inventory.getAllAttributes();
+    }
+
+
+    return Promise.all(promises).then((results)=>{
+       console.log({results})
+       res.json(results)
+       res.end()
+      })
   };
+
+  static getAllAttributes = ( ) => {
+      const promises = [];
+
+      for (const property in Inventory.attributeTable) {
+        console.log({property})
+        const attribute = property.toLowerCase()
+        const properCollectionName = Inventory.attributeTable[attribute];
+        console.log({properCollectionName})
+  
+        if(properCollectionName){
+          promises.push(
+            Inventory.attributeQuery(
+              properCollectionName            )
+          )
+        }
+      }
+
+      return promises;
+  }
+
+  static attributeQuery = (collectionName: string, query?: any ) => {
+    console.log({collectionName,query})
+    return new Promise ((resolve,reject)=>{
+      mongoClient()?.then( (MongoClient) => {
+        MongoClient.db("Inventory")
+        .collection(collectionName)
+        .find(query)
+        .toArray((error, results) => {
+        if (error) reject(error);
+          console.log("results")
+          resolve(results)
+        });
+      })
+    })
+
+  }
 }

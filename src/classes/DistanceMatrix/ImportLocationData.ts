@@ -28,9 +28,9 @@ const downloadZipCodeData = (
     definitiveFileName
   );
 
-  importer
-    .download()
-    .then(() => mkdir(rootPath + fileLocation))
+  //importer
+    //.download()
+     Promise.resolve().then(() => mkdir(rootPath + fileLocation))
     .then(() => parseCSV(`${rootPath + fileLocation}`, fileName, jsonFileName));
 };
 
@@ -85,6 +85,7 @@ const parseCSV = async (
   // / Transform object structure to use zip as Key
   const transformCSV = transformer((data: { [key: string]: any }) => {
     const newObject: { [key: string]: any } = {};
+    console.log(data)
     newObject[data["Zipcode"]] = {
       lat: data.Lat,
       long: data.Long,

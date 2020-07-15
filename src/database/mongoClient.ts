@@ -13,6 +13,11 @@ const createMongoClient = () => {
       keepAlive: true,
       keepAliveInitialDelay: minutesToMS(10),
       socketTimeoutMS: minutesToMS(10),
+    }).then(MongoClient => {
+      MongoClient.on("error", (e)=>{
+        console.log(e)
+      })
+      return MongoClient
     });
   }
 };
