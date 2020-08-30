@@ -1,3 +1,2 @@
-import zipCodeProcess from "../classes/DistanceMatrix/ImportLocationData"
-
+import zipCodeProcess from "../classes/DistanceMatrix/ImportLocationData";
 zipCodeProcess();

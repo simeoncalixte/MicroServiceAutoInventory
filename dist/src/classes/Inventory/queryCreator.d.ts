@@ -1,3 +1,3 @@
 export declare const routeQueryCreator: {
-    [key: string]: Function;
+  [key: string]: Function;
 };
