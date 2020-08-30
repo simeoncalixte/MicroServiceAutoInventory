@@ -48,6 +48,10 @@ const parseNumberQueries = (str: string): IRangeAndIndividualQuery => {
   return { rangeQuery, indiQuery };
 };
 
+
+//example query { <field1>: { <operator1>: <value1> }, ... }
+
+
 export const routeQueryCreator: { [key: string]: Function } = {
   Year: (yearArgs: string) => {
     const query = parseNumberQueries(yearArgs);
@@ -190,4 +194,21 @@ export const routeQueryCreator: { [key: string]: Function } = {
       }
     }
   },
+};
+
+interface IAttributeQuery {
+  vendor_id: string,
+  models: string[]
+}
+
+export const attributeQueryCreator: { [key: string]: Function } = {
+
+  Models: (queryObjects: IAttributeQuery[] ) => {
+    const vendorIds = queryObjects.map(vendors => vendors.vendor_id)
+    console.log(vendorIds)
+    return {
+      "vendor_id": {$in: vendorIds}
+    }
+  }
+
 };

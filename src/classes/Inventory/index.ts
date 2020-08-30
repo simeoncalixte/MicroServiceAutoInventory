@@ -1,7 +1,8 @@
 import fs from "fs";
 import rootPath from "app-root-path";
 import mongoClient from "../../database/mongoClient";
-import { routeQueryCreator } from "./queryCreator";
+import { routeQueryCreator, attributeQueryCreator } from "./queryCreator";
+import queryTable from "./queryTable";
 import DataImporter from "../DataImporters/DownloadData";
 import { sep } from "path";
 import csvParser from "csv-parse";
@@ -11,23 +12,18 @@ import findZipData from "../../utils/location";
 import { Request, Response } from "express";
 import aggregateAttributes from "../../database/Inventory/aggregations/updateAttritbutes";
 import axios from "axios";
+import getAttribute, {AttributeMap} from "./attributeTable";
 
 interface IAttribute {
   [key: string] : string
 }
-
 
 export default class Inventory {
   private url?: string = "";
   private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
   private archiveCSVDir = `${sep}data${sep}inventory${sep}archive${sep}`;
   private fileName = `inv.csv`;
-  private static  attributeTable : IAttribute = {
-    make : 'Makes',
-    model: 'Models',
-    modelDetail: 'ModelDetail',
-    damages: 'Damages'
-  }
+
   static responseLimit = 1000;
 
   constructor(url?: string) {
@@ -101,50 +97,44 @@ export default class Inventory {
       });
   };
 
-  private static createQuery = async (data: { [key: string]: any }) => {
+  private static createQuery =  (data: { [key: string]: any }) => {
     let query = {};
     for (const key in data) {
-      if (data[key] && routeQueryCreator[key]) {
-        query = Object.assign(query, routeQueryCreator[key](data[key]));
+      if (data[key]) {
+        let createdQuery = queryTable(key)(data[key]);
+        query = Object.assign(query, createdQuery);
+        console.log(createdQuery)
+
       } else {
       }
     }
     return query;
   };
 
-  private importInventory = async () => {
-    const path = rootPath + this.mainInventoryCSVDir + "inv.json";
-    const args = `--uri mongodb://localhost:27017/Inventory -c main --drop --type json --jsonArray --file ${path}`;
-    const mongoImport = mongoImporter(args);
-    mongoImport.on("message", (message) => console.log({ message }));
-    mongoImport.on("error", (error) => console.log({ error }));
-    mongoImport.on("exit", (exit) => console.log({ exit }));
-    mongoImport.on("close", (close) => console.log({ close }));
-  };
-
+  
   static getInventory = async (req: Request, res: Response) => {
     const data = { ...req.params, ...req.query };
     console.log({data})
     return mongoClient()?.then((MongoClient) => {
-
-      const query = Inventory.createQuery(data);
+      
+      const query =   Inventory.createQuery(data);
+      console.log(query);
       // convert page string to number
       const collection = MongoClient.db("Inventory").collection("main");
       const page = data && data.page && !Number.isNaN(data.page)
-        ? Number(data.page) - 1
-        : 0;
+      ? Number(data.page) - 1
+      : 0;
       const limit = data.limit &&
-        !Number.isNaN(data.limit) &&
-        Number(data.limit) <= Inventory.responseLimit
+      !Number.isNaN(data.limit) &&
+      Number(data.limit) <= Inventory.responseLimit
           ? Number(data.limit): (Inventory.responseLimit as number);
-      const find = collection.find(query);
+          const find = collection.find(query);
       find.count((error, count) => {
         find
           .skip(page * limit)
           .limit(limit * 1)
           .toArray()
           .then((data) => {
-            console.log(data)
             res.json({
               Inventory: {
                 totalRecords: count,
@@ -158,14 +148,14 @@ export default class Inventory {
             });
           })
           .finally(() => [res.end()]);
-      });
+        });
     }).catch(e=> console.error(e));
   };
-
+  
   static getImages = async (req: Request, res: Response) => {
     const data = { ...req.params, ...req.query };
     const url = data && data.url ? String(data.url) : "";
-
+    
     try {
       let images;
       await axios.get(url).then((res) => {
@@ -178,82 +168,111 @@ export default class Inventory {
     }
   };
 
+  static getAttributes = async (req: Request, res: Response) => {
+    let promises = [];
+    // if there is properties within the query with or without values
+    if (Object.keys(req.query).length > 0){
+      // for each property within query
+      for (const property in req.query) {
+        /// for uniformity make the key lowercase if possible
+        const attribute = property.toLowerCase()
+        console.log({attribute});
+          // retrieve the proper collection name to be queried. 
+          const properCollectionName = getAttribute(attribute);
+          // assign the values of the current property to memory
+          let queryValues = req.query[property] as string;
+          console.log({queryValues})
+          const parsedValue = queryValues ? JSON.parse(queryValues) : "";
+          console.log({parsedValue})
+
+          console.log({properCollectionName},{parsedValue})
+          //if the proper collection name is found;
+          if(properCollectionName){
+            //lookup query creator for the collection 
+            const queryFunction = attributeQueryCreator[properCollectionName];
+            const exectuedQuery = queryFunction ? queryFunction(parsedValue) : null;
+            console.log({exectuedQuery})
+            promises.push(
+              Inventory.fetchAttributes(
+                properCollectionName,
+                exectuedQuery
+              )
+            )
+          }
+          //return a one dimensional array if there is only one promise in @var promises
+          const promiseResolver = promises.length > 1 ? Promise.all(promises) : promises[0];
+          return promiseResolver.then((results)=>{
+            res.json(results)
+            res.end()
+          })
+        }
+      }else{
+        const attributes = Inventory.fetchAllAttributes();
+        const keys = Object.keys(attributes);
+        promises = Object.values(attributes);
+        Promise.all(promises).then(results =>{
+          const newObject : {[key:string]: any} = {}
+          results.forEach((result,index) =>{
+            newObject[keys[index]] = result;
+          })
+          console.log("the results",{results})
+          res.json(newObject);
+          res.end()
+        })
+    }
+    
+
+
+  };
+
+  private importInventory = async () => {
+    const path = rootPath + this.mainInventoryCSVDir + "inv.json";
+    const args = `--uri mongodb://localhost:27017/Inventory -c main --drop --type json --jsonArray --file ${path}`;
+    const mongoImport = mongoImporter(args);
+    mongoImport.on("message", (message) => console.log({ message }));
+    mongoImport.on("error", (error) => console.log({ error }));
+    mongoImport.on("exit", (exit) => console.log({ exit }));
+    mongoImport.on("close", (close) => console.log({ close }));
+  };
+
   static updateAttributes = async () => {
     console.log("updating attributes");
     console.log(mongoClient())
     return mongoClient()?.then( async(MongoClient) => { 
-        console.log("mongoConnected");
-        const collection = MongoClient.db("Inventory").collection("main");
-        const aggregatedCollection = await aggregateAttributes(collection);
-        return aggregatedCollection;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+      console.log("mongoConnected");
+      const collection = MongoClient.db("Inventory").collection("main");
+      const aggregatedCollection = await aggregateAttributes(collection);
+      return aggregatedCollection;
+    })
+    .catch((error) => {
+      console.error(error);
+    });
   };
 
-  static attributes = async (req: Request, res: Response) => {
-    let promises = [];
-    
-    if (Object.keys(req.query).length > 0){
-      for (const property in req.query) {
-        console.log({property})
-        const attribute = property.toLowerCase()
-        const properCollectionName = Inventory.attributeTable[attribute];
-        const value = req.query[property];
-        console.log({properCollectionName})
-  
-        if(properCollectionName){
-          promises.push(
-            Inventory.attributeQuery(
-              properCollectionName,
-              value
-            )
-          )
-        }
-      }
-    }else{
-     promises = Inventory.getAllAttributes();
-    }
+  static fetchAllAttributes = ( ) => {
+      const object: {[key:string] : any}= {};
 
-
-    return Promise.all(promises).then((results)=>{
-       console.log({results})
-       res.json(results)
-       res.end()
-      })
-  };
-
-  static getAllAttributes = ( ) => {
-      const promises = [];
-
-      for (const property in Inventory.attributeTable) {
-        console.log({property})
-        const attribute = property.toLowerCase()
-        const properCollectionName = Inventory.attributeTable[attribute];
-        console.log({properCollectionName})
-  
-        if(properCollectionName){
-          promises.push(
-            Inventory.attributeQuery(
-              properCollectionName            )
-          )
-        }
+      for (const [key,collectionName] of AttributeMap) {
+          object[collectionName] = Inventory.fetchAttributes(collectionName);
       }
 
-      return promises;
+      return object;
   }
 
-  static attributeQuery = (collectionName: string, query?: any ) => {
+  /**
+   * @param collectionName the name of the mongodb attribute collection to fetch
+   * @param query the mongodb query object that will be executed on the collection
+   */
+  static fetchAttributes = (collectionName: string, query?: any ) => {
     console.log({collectionName,query})
     return new Promise ((resolve,reject)=>{
       mongoClient()?.then( (MongoClient) => {
         MongoClient.db("Inventory")
         .collection(collectionName)
-        .find(query)
+        .find(!query ? undefined : query)
         .toArray((error, results) => {
         if (error) reject(error);
-          console.log("results")
+          console.log({results})
           resolve(results)
         });
       })
