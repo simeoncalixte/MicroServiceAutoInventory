@@ -23,7 +23,6 @@ export default class Inventory {
   private mainInventoryCSVDir = `${sep}data${sep}inventory${sep}`;
   private archiveCSVDir = `${sep}data${sep}inventory${sep}archive${sep}`;
   private fileName = `inv.csv`;
-
   static responseLimit = 1000;
 
   constructor(url?: string) {
@@ -100,14 +99,16 @@ export default class Inventory {
   private static createQuery =  (data: { [key: string]: any }) => {
     let query = {};
     for (const key in data) {
-      if (data[key]) {
-        let createdQuery = queryTable(key)(data[key]);
-        query = Object.assign(query, createdQuery);
-        console.log(createdQuery)
+        if(typeof queryTable(key) !== "function") {
+          console.log(`${key} is not a query function`);
+          continue;
+        };
 
-      } else {
+        let createdQuery = queryTable(key)(data[key]);
+        console.debug({createdQuery})
+        query = Object.assign(query, createdQuery);
       }
-    }
+    console.log({query})
     return query;
   };
 
@@ -122,7 +123,7 @@ export default class Inventory {
       // convert page string to number
       const collection = MongoClient.db("Inventory").collection("main");
       const page = data && data.page && !Number.isNaN(data.page)
-      ? Number(data.page) - 1
+      ? (Number(data.page) - 1)*-1
       : 0;
       const limit = data.limit &&
       !Number.isNaN(data.limit) &&
@@ -190,12 +191,11 @@ export default class Inventory {
           if(properCollectionName){
             //lookup query creator for the collection 
             const queryFunction = attributeQueryCreator[properCollectionName];
-            const exectuedQuery = queryFunction ? queryFunction(parsedValue) : null;
-            console.log({exectuedQuery})
+            const executed = queryFunction ? queryFunction(parsedValue) : null;
             promises.push(
               Inventory.fetchAttributes(
                 properCollectionName,
-                exectuedQuery
+                executed
               )
             )
           }
@@ -237,11 +237,11 @@ export default class Inventory {
 
   static updateAttributes = async () => {
     console.log("updating attributes");
-    console.log(mongoClient())
+    console.log(mongoClient());
     return mongoClient()?.then( async(MongoClient) => { 
       console.log("mongoConnected");
       const collection = MongoClient.db("Inventory").collection("main");
-      const aggregatedCollection = await aggregateAttributes(collection);
+    const aggregatedCollection = aggregateAttributes(collection);
       return aggregatedCollection;
     })
     .catch((error) => {

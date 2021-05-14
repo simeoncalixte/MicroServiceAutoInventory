@@ -1,2 +1,3 @@
 import Inventory from "../classes/Inventory";
-Inventory.updateAttributes();
+console.log(Inventory.updateAttributes().then(results=> console.log({results})));
+

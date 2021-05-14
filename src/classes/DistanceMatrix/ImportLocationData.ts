@@ -28,8 +28,8 @@ const downloadZipCodeData = (
     definitiveFileName
   );
 
-  //importer
-    //.download()
+  importer
+    .download()
      Promise.resolve().then(() => mkdir(rootPath + fileLocation))
     .then(() => parseCSV(`${rootPath + fileLocation}`, fileName, jsonFileName));
 };

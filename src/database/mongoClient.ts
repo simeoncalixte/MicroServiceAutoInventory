@@ -1,9 +1,12 @@
 import { MongoClient } from "mongodb";
+import process from "process";
+
 const minutesToMS = (min: number) => {
   return min * 60 * 1000;
 };
 const createMongoClient = () => {
   const URI = process.env.MONGO_DB_URI;
+  console.log({URI});
   const client = MongoClient;
 
   if (URI) {

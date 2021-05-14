@@ -15,7 +15,7 @@ interface IRangeAndIndividualQuery {
 }
 
 const parseCSVValues = (str: string) => {
-  if (str != "") {
+  if (str) {
     let array = str?.split(",");
     array = array.map((str) => {
       return str.replace(/^"/, "").replace(/"$/, "").toUpperCase();
@@ -48,6 +48,40 @@ const parseNumberQueries = (str: string): IRangeAndIndividualQuery => {
 };
 
 const arrayOfType = [
+  {
+    key: /(year(s)?)/gi,
+    value: (yearRange: string) => {
+      console.log({yearRange});
+      const query = parseNumberQueries(yearRange);
+      if (
+        (query.indiQuery && query.indiQuery.$in.length) ||
+        query.rangeQuery.length
+      ) {
+        console.log(query.rangeQuery);
+        console.log(query.indiQuery);
+        return {
+          $or: [
+            { Year: query.indiQuery },
+            { Year: query.rangeQuery[0]  },
+          ],
+        };
+      }
+    }
+  },
+  {
+    key: /price/gi,
+    value: (price: string) => {
+      const priceRange = parseCSVValues(price);
+      return priceRange ? { "Buy-It-Now Price": parseNumberQueries(price).rangeQuery[0]} : null;
+    }
+  },
+  {
+    key: /odometer/gi,
+    value: (odometer: string) => {
+      const odometerRange = parseCSVValues(odometer);
+      return odometerRange ? { "Odometer": parseNumberQueries(odometer).rangeQuery[0]} : null;
+    }
+  },
   {
     key: /(make(s)*|vendor(s)*)/gi,
     value: (make: string) => {
@@ -166,7 +200,6 @@ arrayOfType.forEach(collection=> {
 
 const getAttribute = (testCase: string)  => {
   for (let [key,value] of AttributeMap) {
-      console.log({testCase})
       if(testCase.match(key)){
         return AttributeMap.get(key);
       }

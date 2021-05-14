@@ -53,7 +53,7 @@ const parseNumberQueries = (str: string): IRangeAndIndividualQuery => {
 
 
 export const routeQueryCreator: { [key: string]: Function } = {
-  Year: (yearArgs: string) => {
+  year: (yearArgs: string) => {
     const query = parseNumberQueries(yearArgs);
     if (
       (query.indiQuery && query.indiQuery.$in.length) ||
