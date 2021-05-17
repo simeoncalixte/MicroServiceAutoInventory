@@ -62,7 +62,7 @@ arrayOfType.forEach(collection=> {
   AttributeMap.set(key,value);
 })
 
-const getAttribute = (testCase: string) => {
+const getCollectionName = (testCase: string) => {
   for (let [key,value] of AttributeMap) {
       console.log({testCase})
       if(testCase.match(key)){
@@ -72,4 +72,4 @@ const getAttribute = (testCase: string) => {
   return undefined
 }
 
-export default getAttribute;
+export default getCollectionName;

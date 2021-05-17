@@ -12,7 +12,8 @@ import findZipData from "../../utils/location";
 import { Request, Response } from "express";
 import aggregateAttributes from "../../database/Inventory/aggregations/updateAttritbutes";
 import axios from "axios";
-import getAttribute, {AttributeMap} from "./attributeTable";
+import getAttribute, {AttributeMap} from "./collectionTable";
+import getCollectionName from "./collectionTable";
 
 interface IAttribute {
   [key: string] : string
@@ -176,22 +177,23 @@ export default class Inventory {
       // for each property within query
       for (const property in req.query) {
         /// for uniformity make the key lowercase if possible
-        const attribute = property.toLowerCase()
-        console.log({attribute});
-          // retrieve the proper collection name to be queried. 
-          const properCollectionName = getAttribute(attribute);
-          // assign the values of the current property to memory
-          let queryValues = req.query[property] as string;
-          console.log({queryValues})
-          const parsedValue = queryValues ? JSON.parse(queryValues) : "";
-          console.log({parsedValue})
-
-          console.log({properCollectionName},{parsedValue})
-          //if the proper collection name is found;
-          if(properCollectionName){
+        const attribute = property.toLowerCase();
+        // retrieve the proper collection name to be queried. 
+        const properCollectionName = getCollectionName(attribute);
+        // assign the values of the current property to memory
+        const queryValues = req.query[property];
+        console.log({queryValues});
+        let parsedValue = "";
+        if(queryValues){
+          const isArray = Array.isArray(queryValues);
+          //@ts-ignore //array is being parsed but ts doesn't not recognize this
+          parsedValue = isArray ? queryValues.map((element)=>JSON.parse(element)) : JSON.parse(queryValues);
+        }
+        if(properCollectionName){
             //lookup query creator for the collection 
             const queryFunction = attributeQueryCreator[properCollectionName];
             const executed = queryFunction ? queryFunction(parsedValue) : null;
+            console.log({properCollectionName, queryValues,parsedValue,executed});
             promises.push(
               Inventory.fetchAttributes(
                 properCollectionName,
@@ -264,7 +266,6 @@ export default class Inventory {
    * @param query the mongodb query object that will be executed on the collection
    */
   static fetchAttributes = (collectionName: string, query?: any ) => {
-    console.log({collectionName,query})
     return new Promise ((resolve,reject)=>{
       mongoClient()?.then( (MongoClient) => {
         MongoClient.db("Inventory")
