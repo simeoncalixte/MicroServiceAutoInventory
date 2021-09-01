@@ -157,7 +157,8 @@ export default class Inventory {
   static getImages = async (req: Request, res: Response) => {
     const data = { ...req.params, ...req.query };
     const url = data && data.url ? String(data.url) : "";
-    
+    console.log({url});
+    // res.end();
     try {
       let images;
       await axios.get(url).then((res) => {
