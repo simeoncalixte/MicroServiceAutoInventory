@@ -27,7 +27,7 @@
     "csv": "^5.3.1",
     "csv-parse": "^4.8.5",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "mongodb": "^3.5.2",
     "stream-transform": "^2.0.1"
   },
